@@ -8,7 +8,7 @@
   <!-- A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@e47f441/dist/aframe-master.min.js"></script>
 
-  <!-- A-Frame Extras (optional) -->
+  <!-- A-Frame Extras -->
   <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
   <!-- AR.js -->
@@ -23,11 +23,8 @@
 
     #overlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      inset: 0;
+      background: rgba(0, 0, 0, 0.90);
       color: white;
       display: flex;
       align-items: center;
@@ -38,35 +35,31 @@
       cursor: pointer;
       text-align: center;
       padding: 0 20px;
-      box-sizing: border-box;
     }
 
-    /* Always-visible HTML badge */
     #brandingBackup {
       position: fixed;
+      top: 12px;
       left: 50%;
       transform: translateX(-50%);
-      top: 10px;
-      text-align: center;
       color: coral;
       font-weight: bold;
       font-size: 13px;
       z-index: 9998;
-      pointer-events: none;
       letter-spacing: 2px;
-      text-transform: uppercase;
+      pointer-events: none;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- Tap to play overlay -->
+  <!-- Start overlay -->
   <div id="overlay">
     Tap anywhere to start the Vybes AR experience
   </div>
 
-  <!-- HTML branding (always visible) -->
+  <!-- HTML fallback label -->
   <div id="brandingBackup">POWERED BY AVRLY</div>
 
   <a-scene
@@ -75,64 +68,54 @@
     renderer="logarithmicDepthBuffer: true; antialias: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <!-- Camera with UI attached so user always sees it -->
-    <a-entity id="cameraRig" camera look-controls>
-      <!-- Fancy video rig, slightly below center and in front -->
-      <a-entity
-        id="video-rig"
-        position="0 -0.1 -2.5"
-        animation__float="property: position; dir: alternate; dur: 2500; easing: easeInOutSine; from: 0 -0.1 -2.5; to: 0 0.0 -2.5">
+    <!-- Camera -->
+    <a-entity id="camera" camera look-controls></a-entity>
 
-        <!-- Glow / glass background -->
-        <a-plane
-          position="0 0 0"
-          width="2.2"
-          height="1.4"
-          material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
-        </a-plane>
+    <!-- World anchored AR panel -->
+    <a-entity
+      id="video-rig"
+      place-once-in-front-of-camera="distance: 0.35"
+      animation__float="property: position; dir: alternate; dur: 2600; easing: easeInOutSine;
+                         from: 0 0 0; to: 0 0.06 0">
 
-        <!-- Neon border -->
-        <a-plane
-          position="0 0 0.01"
-          width="2.26"
-          height="1.46"
-          material="color: #ff7f50; opacity: 0.65; wireframe: true;">
-        </a-plane>
+      <!-- Glass plate -->
+      <a-plane
+        position="0 0 0"
+        width="2.2"
+        height="1.4"
+        material="color: #050608; opacity: 0.88; metalness: 0.4; roughness: 0.2;">
+      </a-plane>
 
-        <!-- Video screen (keeps the correct aspect ratio) -->
-        <a-plane
-          id="video-screen"
-          src="#video"
-          position="0 0 0.02"
-          video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
-        </a-plane>
+      <!-- Glow wireframe -->
+      <a-plane
+        position="0 0 0.01"
+        width="2.26"
+        height="1.46"
+        material="color: #ff7f50; opacity: 0.7; wireframe: true;">
+      </a-plane>
 
-        <!-- Spinning accent ring -->
-        <a-ring
-          position="1 -0.6 0.05"
-          radius-inner="0.05"
-          radius-outer="0.08"
-          material="color: #ff7f50; opacity: 0.95;"
-          animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
-        </a-ring>
+      <!-- Video display -->
+      <a-plane
+        id="video-screen"
+        src="#video"
+        position="0 0 0.02"
+        video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
+      </a-plane>
 
-        <!-- 3D AVRLY text in the AR scene -->
-        <a-text
-          value="POWERED BY AVRLY"
-          position="0 0.95 0.06"
-          align="center"
-          color="#ff7f50"
-          width="4"
-          anchor="center"
-          side="double">
-        </a-text>
+      <!-- Label above -->
+      <a-text
+        value="POWERED BY AVRLY"
+        position="0 0.95 0.06"
+        align="center"
+        width="4"
+        color="#ff7f50"
+        side="double">
+      </a-text>
 
-      </a-entity>
     </a-entity>
 
     <!-- Assets -->
     <a-assets>
-      <!-- Local video file: must sit in same folder as index.html -->
       <video
         id="video"
         src="./Vybes.mp4"
@@ -145,7 +128,7 @@
   </a-scene>
 
   <script>
-    // Keep video plane aspect ratio correct based on actual video dimensions
+    // Ajust video size based on real aspect ratio
     AFRAME.registerComponent('video-fit-to-aspect', {
       schema: {
         maxWidth: { type: 'number', default: 2.0 },
@@ -156,43 +139,23 @@
         this.video = document.getElementById('video');
         this.updateFromVideo = this.updateFromVideo.bind(this);
 
-        if (this.video) {
-          if (this.video.readyState >= 1) {
-            this.updateFromVideo();
-          } else {
-            this.video.addEventListener('loadedmetadata', this.updateFromVideo);
-          }
-        }
-      },
-
-      remove: function () {
-        if (this.video) {
-          this.video.removeEventListener('loadedmetadata', this.updateFromVideo);
+        if (this.video.readyState >= 1) {
+          this.updateFromVideo();
+        } else {
+          this.video.addEventListener('loadedmetadata', this.updateFromVideo);
         }
       },
 
       updateFromVideo: function () {
-        if (!this.video || !this.video.videoWidth) return;
+        if (!this.video.videoWidth) return;
 
-        const videoAspect = this.video.videoWidth / this.video.videoHeight;
-        const data = this.data;
-        let width, height;
+        const aspect = this.video.videoWidth / this.video.videoHeight;
+        let width = this.data.maxWidth;
+        let height = width / aspect;
 
-        // Fit inside maxWidth / maxHeight while preserving aspect
-        if (videoAspect >= 1) {
-          width = data.maxWidth;
-          height = width / videoAspect;
-          if (height > data.maxHeight) {
-            height = data.maxHeight;
-            width = height * videoAspect;
-          }
-        } else {
-          height = data.maxHeight;
-          width = height * videoAspect;
-          if (width > data.maxWidth) {
-            width = data.maxWidth;
-            height = width / videoAspect;
-          }
+        if (height > this.data.maxHeight) {
+          height = this.data.maxHeight;
+          width = height * aspect;
         }
 
         this.el.setAttribute('width', width);
@@ -200,21 +163,40 @@
       }
     });
 
-    // Tap-to-play (required for mobile autoplay policies)
+    // Place once in front of camera and lock in world
+    AFRAME.registerComponent('place-once-in-front-of-camera', {
+      schema: { distance: { type: 'number', default: 0.35 } },
+
+      init: function () {
+        this.placed = false;
+        this.tick = AFRAME.utils.throttleTick(this.doPlace.bind(this), 150);
+      },
+
+      doPlace: function () {
+        if (this.placed) return;
+
+        const cam = document.querySelector('#camera');
+        if (!cam || !cam.object3D) return;
+
+        const THREE = window.THREE;
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.object3D.quaternion);
+        const pos = new THREE.Vector3().copy(cam.object3D.position).add(dir.multiplyScalar(this.data.distance));
+
+        this.el.object3D.position.copy(pos);
+        this.el.object3D.quaternion.copy(cam.object3D.quaternion);
+
+        this.placed = true;
+      }
+    });
+
+    // Tap to play
     const overlay = document.getElementById("overlay");
     const video = document.getElementById("video");
 
     overlay.addEventListener("click", function () {
-      if (!video) return;
-
       video.play()
-        .then(() => {
-          overlay.style.display = "none";
-          // We keep the HTML AVRLY badge visible on purpose
-        })
-        .catch(err => {
-          alert("Video could not start:\n" + err.message);
-        });
+        .then(() => overlay.style.display = "none")
+        .catch(err => alert("Video blocked: " + err.message));
     });
   </script>
 

@@ -1,290 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Vybes AR Player</title>
 
-  <!-- A-Frame core -->
+  <!-- A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@e47f441/dist/aframe-master.min.js"></script>
 
-  <!-- A-Frame Extras -->
+  <!-- A-Frame Extras (optional) -->
   <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
   <!-- AR.js -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar-nft.js"></script>
 
   <style>
-    * {
-      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
-    }
-
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    .arjs-loader {
-      height: 100%;
-      width: 100%;
-      position: absolute;
+    #overlay {
+      position: fixed;
       top: 0;
       left: 0;
-      background-color: rgba(0, 0, 0, 0.8);
-      z-index: 9999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .arjs-loader-inner {
-      text-align: center;
-      color: white;
-    }
-
-    .spinner {
-      margin: 16px auto;
-      width: 50px;
-      height: 40px;
-      text-align: center;
-      font-size: 10px;
-    }
-
-    .spinner>div {
-      background-color: white;
+      width: 100%;
       height: 100%;
-      width: 6px;
-      display: inline-block;
-      animation: stretchdelay 1.2s infinite ease-in-out;
-    }
-
-    .spinner .rect2 { animation-delay: -1.1s; }
-    .spinner .rect3 { animation-delay: -1.0s; }
-    .spinner .rect4 { animation-delay: -0.9s; }
-    .spinner .rect5 { animation-delay: -0.8s; }
-
-    @keyframes stretchdelay {
-      0%, 40%, 100% { transform: scaleY(0.4); }
-      20% { transform: scaleY(1.0); }
-    }
-
-    .arrow-container {
-      position: relative;
-      width: 50px;
-      height: 50px;
-      margin: 16px auto 0;
-      animation: bounce 2s ease-in-out infinite;
-    }
-
-    .arrow-line,
-    .arrow-line2 {
-      position: absolute;
-      width: 50px;
-      border: 4px solid #fff;
-      border-radius: 15px;
-    }
-
-    .arrow-line {
-      transform: rotate(45deg);
-      left: 10px;
-      bottom: 8px;
-    }
-
-    .arrow-line2 {
-      transform: rotate(-45deg);
-      left: -10px;
-      bottom: 8px;
-    }
-
-    @keyframes bounce {
-      0% { transform: translateY(8px); }
-      50% { transform: translateY(0); }
-      100% { transform: translateY(8px); }
-    }
-
-    #loader-message {
-      margin-top: 8px;
-      margin-bottom: 8px;
-    }
-
-    #playButton {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       z-index: 9999;
       cursor: pointer;
+      text-align: center;
+      padding: 0 20px;
+      box-sizing: border-box;
     }
 
-    #playButton img {
-      width: 64px;
-      height: 64px;
-    }
-
-    #branding {
+    /* Always-visible HTML badge */
+    #brandingBackup {
       position: fixed;
-      top: 10px;
       left: 50%;
       transform: translateX(-50%);
+      top: 10px;
+      text-align: center;
       color: coral;
       font-weight: bold;
-      letter-spacing: 2px;
       font-size: 13px;
       z-index: 9998;
-      text-transform: uppercase;
       pointer-events: none;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
   </style>
-
-  <script>
-    // Shared toggle for both play button and clicking the video frame
-    function toggleVideo() {
-      var video = document.getElementById('video');
-      if (!video) return;
-
-      var image = document.getElementById('playImage');
-
-      if (video.paused) {
-        video.play().then(function () {
-          if (image) image.src = 'pause.png';
-        }).catch(function (e) {
-          console.warn('Video play blocked:', e);
-          alert('Video could not start: ' + e.message);
-        });
-      } else {
-        video.pause();
-        if (image) image.src = 'play.png';
-      }
-    }
-
-    // A-Frame component so clicking the 3D plane toggles video
-    AFRAME.registerComponent('video-click-toggle', {
-      init: function () {
-        this.el.addEventListener('click', function (evt) {
-          toggleVideo();
-        });
-      }
-    });
-
-    // When AR camera is ready, remove loader and show play button
-    window.addEventListener('camera-init', function () {
-      var loader = document.getElementById('loader');
-      if (loader) loader.remove();
-
-      var btn = document.createElement('header');
-      btn.id = "playButton";
-      document.body.appendChild(btn);
-
-      var img = document.createElement('img');
-      img.id = "playImage";
-      img.src = "play.png";
-      btn.appendChild(img);
-
-      // Click on play button
-      btn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        toggleVideo();
-      });
-    });
-
-    // Optional: cookie cleanup
-    function eraseCookieFromAllPaths(name) {
-      var pathBits = location.pathname.split('/');
-      var pathCurrent = ' path=';
-
-      document.cookie = name + '=; expires=Thu, 01-Jan-1970 00:00:01 GMT;';
-
-      for (var i = 0; i < pathBits.length; i++) {
-        pathCurrent += ((pathCurrent.substr(-1) != '/') ? '/' : '') + pathBits[i];
-        document.cookie = name + '=; expires=Thu, 01-Jan-1970 00:00:01 GMT;' + pathCurrent + ';';
-      }
-    }
-    eraseCookieFromAllPaths("__cfduid");
-  </script>
 </head>
 
 <body>
 
-  <!-- Loader -->
-  <div class="arjs-loader" id="loader">
-    <div class="arjs-loader-inner">
-      <div id="loader-message">Loading the hack.. Please wait.</div>
-      <div class="spinner">
-        <div class="rect1"></div>
-        <div class="rect2"></div>
-        <div class="rect3"></div>
-        <div class="rect4"></div>
-        <div class="rect5"></div>
-      </div>
-      <div id="message">Raise the device to your eye-level</div>
-      <div class="arrow-container">
-        <div class="arrow-line"></div>
-        <div class="arrow-line2"></div>
-      </div>
-      <p><strong style="color: coral;">POWERED BY AVRLY</strong></p>
-    </div>
+  <!-- Tap to play overlay -->
+  <div id="overlay">
+    Tap anywhere to start the Vybes AR experience
   </div>
 
-  <!-- Fixed HTML branding -->
-  <div id="branding">POWERED BY AVRLY</div>
+  <!-- HTML branding (always visible) -->
+  <div id="brandingBackup">POWERED BY AVRLY</div>
 
   <a-scene
-    vr-mode-ui="enabled: false"
-    renderer="logarithmicDepthBuffer: true; antialias: true"
     embedded
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"
-    device-orientation-permission-ui="enabled: true">
+    vr-mode-ui="enabled:false"
+    renderer="logarithmicDepthBuffer: true; antialias: true;"
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <!-- AR.js camera -->
-    <a-camera user-height="0" cursor="fuse:false" ar-raycaster raycaster="objects:none"></a-camera>
+    <!-- Camera with UI attached so user always sees it -->
+    <a-entity id="cameraRig" camera look-controls>
+      <!-- Fancy video rig, slightly below center and in front -->
+      <a-entity
+        id="video-rig"
+        position="0 -0.1 -2.5"
+        animation__float="property: position; dir: alternate; dur: 2500; easing: easeInOutSine; from: 0 -0.1 -2.5; to: 0 0.0 -2.5">
 
+        <!-- Glow / glass background -->
+        <a-plane
+          position="0 0 0"
+          width="2.2"
+          height="1.4"
+          material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
+        </a-plane>
+
+        <!-- Neon border -->
+        <a-plane
+          position="0 0 0.01"
+          width="2.26"
+          height="1.46"
+          material="color: #ff7f50; opacity: 0.65; wireframe: true;">
+        </a-plane>
+
+        <!-- Video screen (keeps the correct aspect ratio) -->
+        <a-plane
+          id="video-screen"
+          src="#video"
+          position="0 0 0.02"
+          video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
+        </a-plane>
+
+        <!-- Spinning accent ring -->
+        <a-ring
+          position="1 -0.6 0.05"
+          radius-inner="0.05"
+          radius-outer="0.08"
+          material="color: #ff7f50; opacity: 0.95;"
+          animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
+        </a-ring>
+
+        <!-- 3D AVRLY text in the AR scene -->
+        <a-text
+          value="POWERED BY AVRLY"
+          position="0 0.95 0.06"
+          align="center"
+          color="#ff7f50"
+          width="4"
+          anchor="center"
+          side="double">
+        </a-text>
+
+      </a-entity>
+    </a-entity>
+
+    <!-- Assets -->
     <a-assets>
-      <!-- IMPORTANT: file name MUST be exactly Vybes.MP4 in your repo -->
+      <!-- Local video file: must sit in same folder as index.html -->
       <video
         id="video"
-        src="Vybes.MP4"
+        src="./Vybes.mp4"
         loop
-        crossorigin="anonymous"
         webkit-playsinline
         playsinline>
       </video>
     </a-assets>
 
-    <!-- Background glass panel -->
-    <a-plane
-      position="0 1.4 -4"
-      rotation="0 0 0"
-      width="2.2"
-      height="1.4"
-      material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2; side: double">
-    </a-plane>
-
-    <!-- Neon border -->
-    <a-plane
-      position="0 1.4 -3.98"
-      rotation="0 0 0"
-      width="2.26"
-      height="1.46"
-      material="color: #ff7f50; opacity: 0.7; wireframe: true; side: double">
-    </a-plane>
-
-    <!-- Video plane (clickable) -->
-    <a-plane
-      id="videoPlane"
-      src="#video"
-      position="0 1.4 -3.95"
-      rotation="0 0 0"
-      width="1.6"
-      height="0.9"
-      material="shader: flat; side: double"
-      video-click-toggle>
-    </a-plane>
-
   </a-scene>
-</body>
 
+  <script>
+    // Keep video plane aspect ratio correct based on actual video dimensions
+    AFRAME.registerComponent('video-fit-to-aspect', {
+      schema: {
+        maxWidth: { type: 'number', default: 2.0 },
+        maxHeight: { type: 'number', default: 1.1 }
+      },
+
+      init: function () {
+        this.video = document.getElementById('video');
+        this.updateFromVideo = this.updateFromVideo.bind(this);
+
+        if (this.video) {
+          if (this.video.readyState >= 1) {
+            this.updateFromVideo();
+          } else {
+            this.video.addEventListener('loadedmetadata', this.updateFromVideo);
+          }
+        }
+      },
+
+      remove: function () {
+        if (this.video) {
+          this.video.removeEventListener('loadedmetadata', this.updateFromVideo);
+        }
+      },
+
+      updateFromVideo: function () {
+        if (!this.video || !this.video.videoWidth) return;
+
+        const videoAspect = this.video.videoWidth / this.video.videoHeight;
+        const data = this.data;
+        let width, height;
+
+        // Fit inside maxWidth / maxHeight while preserving aspect
+        if (videoAspect >= 1) {
+          width = data.maxWidth;
+          height = width / videoAspect;
+          if (height > data.maxHeight) {
+            height = data.maxHeight;
+            width = height * videoAspect;
+          }
+        } else {
+          height = data.maxHeight;
+          width = height * videoAspect;
+          if (width > data.maxWidth) {
+            width = data.maxWidth;
+            height = width / videoAspect;
+          }
+        }
+
+        this.el.setAttribute('width', width);
+        this.el.setAttribute('height', height);
+      }
+    });
+
+    // Tap-to-play (required for mobile autoplay policies)
+    const overlay = document.getElementById("overlay");
+    const video = document.getElementById("video");
+
+    overlay.addEventListener("click", function () {
+      if (!video) return;
+
+      video.play()
+        .then(() => {
+          overlay.style.display = "none";
+          // We keep the HTML AVRLY badge visible on purpose
+        })
+        .catch(err => {
+          alert("Video could not start:\n" + err.message);
+        });
+    });
+  </script>
+
+</body>
 </html>

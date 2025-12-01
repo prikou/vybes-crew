@@ -41,7 +41,6 @@
       box-sizing: border-box;
     }
 
-    /* CSS fallback if AR text doesn't render yet */
     #brandingBackup {
       position: fixed;
       left: 0;
@@ -62,7 +61,7 @@
 
   <!-- Tap to play overlay -->
   <div id="overlay">
-    Tap anywhere to start video
+    Tap anywhere to start the Vybes AR experience
   </div>
 
   <!-- HTML fallback watermark -->
@@ -71,27 +70,63 @@
   <a-scene
     embedded
     vr-mode-ui="enabled:false"
+    renderer="logarithmicDepthBuffer: true; antialias: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <!-- Camera rig -->
-    <a-entity id="cameraRig" camera position="0 0 0">
+    <!-- Marker-based AR: use the default HIRO marker -->
+    <a-marker preset="hiro">
 
-      <!-- Video screen -->
-      <a-plane
-        id="video-screen"
-        src="#video"
-        position="0 0 -2.5"
-        video-screen-fit>
-      </a-plane>
+      <!-- Fancy video rig sitting on the marker -->
+      <a-entity id="video-rig"
+        position="0 0 0"
+        animation__float="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; from: 0 0 0; to: 0 0.04 0">
 
-      <!-- POWERED BY AVRLY (3D Text in AR) -->
-      <a-entity
-        position="0 -1.2 -2.5"
-        text="value: POWERED BY AVRLY; color: coral; align: center; width: 4; letterSpacing: 2;">
+        <!-- Glow frame behind video -->
+        <a-plane
+          position="0 0 0"
+          width="1.8"
+          height="1.1"
+          material="color: #111; opacity: 0.85; metalness: 0.3; roughness: 0.2;">
+        </a-plane>
+
+        <!-- Outer subtle border -->
+        <a-plane
+          position="0 0 0.01"
+          width="1.84"
+          height="1.14"
+          material="color: #ff7f50; opacity: 0.6; wireframe: true;">
+        </a-plane>
+
+        <!-- Video screen (auto aspect) -->
+        <a-plane
+          id="video-screen"
+          src="#video"
+          position="0 0 0.02"
+          video-fit-to-aspect>
+        </a-plane>
+
+        <!-- Little glowing badge in corner -->
+        <a-ring
+          position="0.82 -0.5 0.04"
+          radius-inner="0.04"
+          radius-outer="0.06"
+          material="color: #ff7f50; opacity: 0.9;"
+          animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
+        </a-ring>
+
+        <!-- AVRLY text floating above -->
+        <a-entity
+          position="0 0.8 0.05"
+          text="value: POWERED BY AVRLY; color: coral; align: center; width: 2.5; letterSpacing: 3;">
+        </a-entity>
+
       </a-entity>
+    </a-marker>
 
-    </a-entity>
+    <!-- AR.js camera -->
+    <a-entity camera></a-entity>
 
+    <!-- Assets -->
     <a-assets>
       <video
         id="video"
@@ -105,17 +140,15 @@
   </a-scene>
 
   <script>
-    // Component to resize the video plane to match video aspect
-    AFRAME.registerComponent('video-screen-fit', {
+    // Component to keep video aspect ratio perfect on the plane
+    AFRAME.registerComponent('video-fit-to-aspect', {
       schema: {
-        distance: { type: 'number', default: 2.5 },
-        maxWidth: { type: 'number', default: 3.0 },
-        maxHeight: { type: 'number', default: 1.8 }
+        maxWidth: { type: 'number', default: 1.6 },
+        maxHeight: { type: 'number', default: 0.9 }
       },
 
       init: function () {
         this.video = document.getElementById('video');
-        this.onResize = this.onResize.bind(this);
         this.updateFromVideo = this.updateFromVideo.bind(this);
 
         if (this.video) {
@@ -125,12 +158,9 @@
             this.video.addEventListener('loadedmetadata', this.updateFromVideo);
           }
         }
-
-        window.addEventListener('resize', this.onResize);
       },
 
       remove: function () {
-        window.removeEventListener('resize', this.onResize);
         if (this.video) {
           this.video.removeEventListener('loadedmetadata', this.updateFromVideo);
         }
@@ -140,30 +170,34 @@
         if (!this.video || !this.video.videoWidth) return;
 
         const videoAspect = this.video.videoWidth / this.video.videoHeight;
-        const screenAspect = window.innerWidth / window.innerHeight;
-        const d = this.data;
-
+        const data = this.data;
         let width, height;
 
-        if (screenAspect > videoAspect) {
-          height = d.maxHeight;
-          width = height * videoAspect;
-        } else {
-          width = d.maxWidth;
+        // Fit within maxWidth / maxHeight while preserving aspect
+        if (videoAspect >= 1) {
+          // Wider than tall
+          width = data.maxWidth;
           height = width / videoAspect;
+          if (height > data.maxHeight) {
+            height = data.maxHeight;
+            width = height * videoAspect;
+          }
+        } else {
+          // Taller than wide (rare for promo videos, but safe)
+          height = data.maxHeight;
+          width = height * videoAspect;
+          if (width > data.maxWidth) {
+            width = data.maxWidth;
+            height = width / videoAspect;
+          }
         }
 
         this.el.setAttribute('width', width);
         this.el.setAttribute('height', height);
-        this.el.setAttribute('position', `0 0 -${d.distance}`);
-      },
-
-      onResize: function () {
-        this.updateFromVideo();
       }
     });
 
-    // Tap-to-play
+    // Tap-to-play logic (mobile-safe)
     const overlay = document.getElementById("overlay");
     const video = document.getElementById("video");
     const branding = document.getElementById("brandingBackup");
@@ -174,7 +208,7 @@
       video.play()
         .then(() => {
           overlay.style.display = "none";
-          branding.style.display = "none"; // hide backup once AR renders
+          branding.style.display = "none"; // AR text takes over
         })
         .catch(err => {
           alert("Video could not start:\n" + err.message);

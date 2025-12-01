@@ -1,204 +1,306 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport"
+        content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
   <title>Vybes AR Player</title>
 
-  <!-- A-Frame -->
+  <!-- A-Frame core (pinned commit like you had) -->
   <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@e47f441/dist/aframe-master.min.js"></script>
 
   <!-- A-Frame Extras -->
   <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
-  <!-- AR.js -->
+  <!-- AR.js for A-Frame -->
   <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar-nft.js"></script>
 
   <style>
+    * {
+      -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    }
+
     body {
       margin: 0;
       overflow: hidden;
       background: black;
-    }
-
-    #overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.90);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 22px;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      z-index: 9999;
-      cursor: pointer;
-      text-align: center;
-      padding: 0 20px;
     }
 
-    #brandingBackup {
+    .arjs-loader {
+      height: 100%;
+      width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .arjs-loader-inner {
+      text-align: center;
+      color: white;
+    }
+
+    .spinner {
+      margin: 16px auto;
+      width: 50px;
+      height: 40px;
+      text-align: center;
+      font-size: 10px;
+    }
+
+    .spinner>div {
+      background-color: white;
+      height: 100%;
+      width: 6px;
+      display: inline-block;
+      animation: stretchdelay 1.2s infinite ease-in-out;
+    }
+
+    .spinner .rect2 {
+      animation-delay: -1.1s;
+    }
+
+    .spinner .rect3 {
+      animation-delay: -1.0s;
+    }
+
+    .spinner .rect4 {
+      animation-delay: -0.9s;
+    }
+
+    .spinner .rect5 {
+      animation-delay: -0.8s;
+    }
+
+    @keyframes stretchdelay {
+      0%, 40%, 100% {
+        transform: scaleY(0.4);
+      }
+
+      20% {
+        transform: scaleY(1.0);
+      }
+    }
+
+    .arrow-container {
+      position: relative;
+      width: 50px;
+      height: 50px;
+      margin: 16px auto 0;
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    .arrow-line,
+    .arrow-line2 {
+      position: absolute;
+      width: 50px;
+      border: 4px solid #fff;
+      border-radius: 15px;
+    }
+
+    .arrow-line {
+      transform: rotate(45deg);
+      left: 10px;
+      bottom: 8px;
+    }
+
+    .arrow-line2 {
+      transform: rotate(-45deg);
+      left: -10px;
+      bottom: 8px;
+    }
+
+    @keyframes bounce {
+      0% {
+        transform: translateY(8px);
+      }
+
+      50% {
+        transform: translateY(0);
+      }
+
+      100% {
+        transform: translateY(8px);
+      }
+    }
+
+    #loader-message {
+      margin-top: 8px;
+      margin-bottom: 8px;
+    }
+
+    #playButton {
       position: fixed;
-      top: 12px;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+    }
+
+    #playButton img {
+      width: 64px;
+      height: 64px;
+    }
+
+    #branding {
+      position: fixed;
+      top: 10px;
       left: 50%;
       transform: translateX(-50%);
       color: coral;
       font-weight: bold;
+      letter-spacing: 2px;
       font-size: 13px;
       z-index: 9998;
-      letter-spacing: 2px;
-      pointer-events: none;
+      text-transform: uppercase;
     }
   </style>
+
+  <script>
+    // Your original play-on-window-click component
+    AFRAME.registerComponent('play-on-window-click', {
+      init: function () {
+        this.onClick = this.onClick.bind(this);
+      },
+      play: function () {
+        window.addEventListener('click', this.onClick);
+      },
+      pause: function () {
+        window.removeEventListener('click', this.onClick);
+      },
+      onClick: function () {
+        var video = document.getElementById('video');
+        if (!video) return;
+
+        var image = document.getElementById('playImage');
+
+        if (video.paused) {
+          video.play().catch(function (e) {
+            console.warn('Video play blocked:', e);
+          });
+          if (image) image.src = "pause.png";
+        } else {
+          video.pause();
+          if (image) image.src = "play.png";
+        }
+      }
+    });
+
+    // Remove loader and show play button when AR.js camera is ready
+    window.addEventListener('camera-init', function () {
+      var loader = document.getElementById('loader');
+      if (loader) loader.remove();
+
+      // Play button UI
+      var btn = document.createElement('header');
+      btn.id = "playButton";
+      document.body.appendChild(btn);
+
+      var img = document.createElement('img');
+      img.id = "playImage";
+      img.src = "play.png";
+      btn.appendChild(img);
+    });
+
+    // Simple cookie cleanup (optional, from your original)
+    function eraseCookieFromAllPaths(name) {
+      var pathBits = location.pathname.split('/');
+      var pathCurrent = ' path=';
+
+      document.cookie = name + '=; expires=Thu, 01-Jan-1970 00:00:01 GMT;';
+
+      for (var i = 0; i < pathBits.length; i++) {
+        pathCurrent += ((pathCurrent.substr(-1) != '/') ? '/' : '') + pathBits[i];
+        document.cookie = name + '=; expires=Thu, 01-Jan-1970 00:00:01 GMT;' + pathCurrent + ';';
+      }
+    }
+    eraseCookieFromAllPaths("__cfduid");
+  </script>
 </head>
 
 <body>
 
-  <!-- Start overlay -->
-  <div id="overlay">
-    Tap anywhere to start the Vybes AR experience
+  <!-- Loader -->
+  <div class="arjs-loader" id="loader">
+    <div class="arjs-loader-inner">
+      <div id="loader-message">Loading the hack.. Please wait.</div>
+      <div class="spinner">
+        <div class="rect1"></div>
+        <div class="rect2"></div>
+        <div class="rect3"></div>
+        <div class="rect4"></div>
+        <div class="rect5"></div>
+      </div>
+      <div id="message">Raise the device to your eye-level</div>
+      <div class="arrow-container">
+        <div class="arrow-line"></div>
+        <div class="arrow-line2"></div>
+      </div>
+      <p><strong style="color: coral;">POWERED BY AVRLY</strong></p>
+    </div>
   </div>
 
-  <!-- HTML fallback label -->
-  <div id="brandingBackup">POWERED BY AVRLY</div>
+  <!-- Fixed HTML branding -->
+  <div id="branding">POWERED BY AVRLY</div>
 
   <a-scene
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; antialias: true"
     embedded
-    vr-mode-ui="enabled:false"
-    renderer="logarithmicDepthBuffer: true; antialias: true;"
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false"
+    device-orientation-permission-ui="enabled: true">
 
-    <!-- Camera -->
-    <a-entity id="camera" camera look-controls></a-entity>
+    <!-- Standard AR.js camera -->
+    <a-camera user-height="0" cursor="fuse:false" ar-raycaster raycaster="objects:none"></a-camera>
 
-    <!-- World anchored AR panel -->
-    <a-entity
-      id="video-rig"
-      place-once-in-front-of-camera="distance: 0.35"
-      animation__float="property: position; dir: alternate; dur: 2600; easing: easeInOutSine;
-                         from: 0 0 0; to: 0 0.06 0">
-
-      <!-- Glass plate -->
-      <a-plane
-        position="0 0 0"
-        width="2.2"
-        height="1.4"
-        material="color: #050608; opacity: 0.88; metalness: 0.4; roughness: 0.2;">
-      </a-plane>
-
-      <!-- Glow wireframe -->
-      <a-plane
-        position="0 0 0.01"
-        width="2.26"
-        height="1.46"
-        material="color: #ff7f50; opacity: 0.7; wireframe: true;">
-      </a-plane>
-
-      <!-- Video display -->
-      <a-plane
-        id="video-screen"
-        src="#video"
-        position="0 0 0.02"
-        video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
-      </a-plane>
-
-      <!-- Label above -->
-      <a-text
-        value="POWERED BY AVRLY"
-        position="0 0.95 0.06"
-        align="center"
-        width="4"
-        color="#ff7f50"
-        side="double">
-      </a-text>
-
-    </a-entity>
-
-    <!-- Assets -->
     <a-assets>
+      <!-- IMPORTANT: file name must be exactly Vybes.MP4 in the repo -->
       <video
         id="video"
-        src="./Vybes.mp4"
+        src="Vybes.MP4"
         loop
+        crossorigin="anonymous"
         webkit-playsinline
         playsinline>
       </video>
     </a-assets>
 
+    <!-- Background panel behind video (for wow effect) -->
+    <a-plane
+      position="0 1.4 -4"
+      rotation="0 0 0"
+      width="2.2"
+      height="1.4"
+      material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2; side: double">
+    </a-plane>
+
+    <!-- Neon border -->
+    <a-plane
+      position="0 1.4 -3.98"
+      rotation="0 0 0"
+      width="2.26"
+      height="1.46"
+      material="color: #ff7f50; opacity: 0.7; wireframe: true; side: double">
+    </a-plane>
+
+    <!-- Video surface: 16:9 aspect -->
+    <a-plane
+      src="#video"
+      position="0 1.4 -3.95"
+      rotation="0 0 0"
+      width="1.6"
+      height="0.9"
+      material="shader: flat; side: double"
+      play-on-window-click>
+    </a-plane>
+
   </a-scene>
-
-  <script>
-    // Ajust video size based on real aspect ratio
-    AFRAME.registerComponent('video-fit-to-aspect', {
-      schema: {
-        maxWidth: { type: 'number', default: 2.0 },
-        maxHeight: { type: 'number', default: 1.1 }
-      },
-
-      init: function () {
-        this.video = document.getElementById('video');
-        this.updateFromVideo = this.updateFromVideo.bind(this);
-
-        if (this.video.readyState >= 1) {
-          this.updateFromVideo();
-        } else {
-          this.video.addEventListener('loadedmetadata', this.updateFromVideo);
-        }
-      },
-
-      updateFromVideo: function () {
-        if (!this.video.videoWidth) return;
-
-        const aspect = this.video.videoWidth / this.video.videoHeight;
-        let width = this.data.maxWidth;
-        let height = width / aspect;
-
-        if (height > this.data.maxHeight) {
-          height = this.data.maxHeight;
-          width = height * aspect;
-        }
-
-        this.el.setAttribute('width', width);
-        this.el.setAttribute('height', height);
-      }
-    });
-
-    // Place once in front of camera and lock in world
-    AFRAME.registerComponent('place-once-in-front-of-camera', {
-      schema: { distance: { type: 'number', default: 0.35 } },
-
-      init: function () {
-        this.placed = false;
-        this.tick = AFRAME.utils.throttleTick(this.doPlace.bind(this), 150);
-      },
-
-      doPlace: function () {
-        if (this.placed) return;
-
-        const cam = document.querySelector('#camera');
-        if (!cam || !cam.object3D) return;
-
-        const THREE = window.THREE;
-        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.object3D.quaternion);
-        const pos = new THREE.Vector3().copy(cam.object3D.position).add(dir.multiplyScalar(this.data.distance));
-
-        this.el.object3D.position.copy(pos);
-        this.el.object3D.quaternion.copy(cam.object3D.quaternion);
-
-        this.placed = true;
-      }
-    });
-
-    // Tap to play
-    const overlay = document.getElementById("overlay");
-    const video = document.getElementById("video");
-
-    overlay.addEventListener("click", function () {
-      video.play()
-        .then(() => overlay.style.display = "none")
-        .catch(err => alert("Video blocked: " + err.message));
-    });
-  </script>
-
 </body>
+
 </html>

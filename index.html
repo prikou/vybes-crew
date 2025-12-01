@@ -6,42 +6,50 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
-    <!-- <meta http-equiv="Set-Cookie" content="name=data; path=/; expires="> -->
     <meta http-equiv="Expires" content="0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
     <title>AFRAME</title>
+
+    <!-- A-Frame core -->
     <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@e47f441/dist/aframe-master.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.0/dist/aframe-extras.min.js"></script>
-    <script src="https://ghcdn.rawgit.org/chenzlabs/aframe-ar/8a7ee3b/dist/aframe-ar.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar-nft.js"></script>
-    <!-- <script src="https://raw.githack.com/jeromeetienne/AR.js/2.1.4/aframe/build/aframe-ar.js"></script> -->
+
+    <!-- A-Frame Extras -->
+    <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
+
+    <!-- AR.js NFT build (pinned version) -->
+    <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar-nft.js"></script>
+
+    <!-- Your own JS -->
     <script src="scripts.js"></script>
+
     <script>
-        AFRAME.registerComponent('videoScene',{
-                init:function(){
-                    var vid = document.getElementById('video');
-                    setTimeout(function(){                
-                        document.querySelector('#video').pause();
-                    },1000);
-                    setTimeout(function(){
-                        vid.play();
-                    },1000);
-                }
+        AFRAME.registerComponent('videoScene', {
+            init: function () {
+                var vid = document.getElementById('video');
+                setTimeout(function () {
+                    document.querySelector('#video').pause();
+                }, 1000);
+                setTimeout(function () {
+                    vid.play();
+                }, 1000);
             }
-        )
+        });
+
         window.addEventListener('camera-init', (data) => {
             document.querySelector("#loader").remove();
             var playButton = document.createElement('header');
             playButton.id = "playButton";
             playButton.classList.add('playButton');
             document.body.appendChild(playButton);
+
             var playImage = document.createElement('img');
             playImage.id = "playImage";
             playImage.src = "play.png";
             playImage.classList.add('playImage');
             document.querySelector('#playButton').appendChild(playImage);
-        })
+        });
+
         function eraseCookieFromAllPaths(name) {
             // This function will attempt to remove a cookie from all paths.
             var pathBits = location.pathname.split('/');
@@ -57,9 +65,11 @@
         }
         eraseCookieFromAllPaths("__cfduid");
     </script>
-    
-    <style> 
-        * { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+
+    <style>
+        * {
+            -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+        }
 
         .playButton {
             margin-top: -10%;
@@ -73,6 +83,7 @@
             width: 10%;
             height: 10%;
         }
+
         .arjs-loader {
             height: 100%;
             width: 100%;
@@ -103,12 +114,12 @@
             font-size: 10px;
         }
 
-        .spinner > div {
+        .spinner>div {
             background-color: white;
             height: 100%;
             width: 6px;
             display: inline-block;
-            
+
             -webkit-animation: sk-stretchdelay 1.2s infinite ease-in-out;
             animation: sk-stretchdelay 1.2s infinite ease-in-out;
         }
@@ -134,15 +145,26 @@
         }
 
         @-webkit-keyframes sk-stretchdelay {
-            0%, 40%, 100% { -webkit-transform: scaleY(0.4) }  
-            20% { -webkit-transform: scaleY(1.0) }
+            0%,
+            40%,
+            100% {
+                -webkit-transform: scaleY(0.4)
+            }
+
+            20% {
+                -webkit-transform: scaleY(1.0)
+            }
         }
 
         @keyframes sk-stretchdelay {
-            0%, 40%, 100% { 
+            0%,
+            40%,
+            100% {
                 transform: scaleY(0.4);
                 -webkit-transform: scaleY(0.4);
-            }  20% { 
+            }
+
+            20% {
                 transform: scaleY(1.0);
                 -webkit-transform: scaleY(1.0);
             }
@@ -154,7 +176,7 @@
             right: 50px;
             width: 50px;
             height: 50px;
-            animation: bounce 2s ease-in-out infinite ;
+            animation: bounce 2s ease-in-out infinite;
             margin: auto;
             margin-top: 0px;
             margin-bottom: 70px;
@@ -162,15 +184,15 @@
 
         .arrow-line {
             left: 36px;
-            position:absolute;
+            position: absolute;
             width: 50px;
             border: 4px solid #fff;
             border-radius: 15px;
             transform: rotate(45deg);
         }
 
-        .arrow-line2{
-            position:absolute;
+        .arrow-line2 {
+            position: absolute;
             width: 50px;
             border: 4px solid #fff;
             border-radius: 15px;
@@ -178,9 +200,17 @@
         }
 
         @keyframes bounce {
-            0%   {bottom: -20px;}
-            50%  {bottom: 0px;}
-            100% {bottom: -20px;}
+            0% {
+                bottom: -20px;
+            }
+
+            50% {
+                bottom: 0px;
+            }
+
+            100% {
+                bottom: -20px;
+            }
         }
 
         #message {
@@ -188,9 +218,6 @@
             margin-top: 80px;
         }
     </style>
-
-    <!-- <script>var clicky_site_ids = clicky_site_ids || []; clicky_site_ids.push(101296606);</script>
-    <script async src="//static.getclicky.com/js"></script> -->
 </head>
 
 <body style="overflow-x: hidden;">
@@ -201,7 +228,8 @@
                 <div class="rect1"></div>
                 <div class="rect2"></div>
                 <div class="rect3"></div>
-                <div class="rect4"></div>`
+                <div class="rect4"></div>
+                <div class="rect5"></div>
             </div>
             <div id="message">Raise the device to your eye-level</div>
             <div class="arrow-container">
@@ -213,23 +241,34 @@
             </p>
         </div>
     </div>
-    <a-scene vr-mode-ui="enabled: false;" height="90vh" renderer="logarithmicDepthBuffer: true;" embedded arjs="trackingMethod: best; sourceType: webcam;debugUIEnabled: true;" device-orientation-permission-ui="enabled: true" videoScene>
+
+    <a-scene vr-mode-ui="enabled: false;" height="90vh"
+        renderer="logarithmicDepthBuffer: true;"
+        embedded
+        arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: true;"
+        device-orientation-permission-ui="enabled: true"
+        videoScene>
 
         <a-camera user-height="0" cursor="fuse:false" ar-raycaster raycaster="objects:none"></a-camera>
-        <a-assets>
-            <video id="video" src="Vybes.MP4" autoplay="" controls="true" loop="" crossorigin="anonymous" webkit-playsinline playsinline play-on-window-click></video>
-        </a-assets>
-        <a-plane position="0 5 -55" rotation="0 0 0" material="side: double" height="12" width="20" color="grey" metalness="1"></a-plane>
-        <a-plane src="#video"  position="0 5 -50" rotation="0 0 0" material="side: double" height="8" width="15" play-on-window-click></a-plane>
 
-        <!-- <a-assets>
-            <a-asset-item id="cityModel" src="C:\Users\princ\Documents\Projects\A-frame_video_player\AR-Video-Player\source\Elon Musk (1).glb"></a-asset-item>
-          </a-assets>
-          <a-entity glb-model="#cityModel" modify-materials></a-entity> -->
+        <a-assets>
+            <video id="video" src="Vybes.MP4" autoplay="" controls="true" loop=""
+                crossorigin="anonymous" webkit-playsinline playsinline play-on-window-click></video>
+        </a-assets>
+
+        <a-plane position="0 5 -55" rotation="0 0 0" material="side: double" height="12" width="20"
+            color="grey" metalness="1"></a-plane>
+
+        <a-plane src="#video" position="0 5 -50" rotation="0 0 0" material="side: double" height="8"
+            width="15" play-on-window-click></a-plane>
+
+        <!--
+        <a-assets>
+            <a-asset-item id="cityModel" src="ElonMusk.glb"></a-asset-item>
+        </a-assets>
+        <a-entity glb-model="#cityModel" modify-materials></a-entity>
+        -->
     </a-scene>
-    <!-- <header id="playButton" style="margin-top: -10%; position: relative; z-index: 9999;">
-        <img src="play.png" style="margin-left: 50%; margin-top: 0%;" play-on-window-click>
-    </header> -->
 </body>
 
 </html>

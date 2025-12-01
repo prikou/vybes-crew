@@ -41,18 +41,20 @@
       box-sizing: border-box;
     }
 
+    /* Always-visible HTML badge */
     #brandingBackup {
       position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 10px;
       text-align: center;
       color: coral;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 13px;
       z-index: 9998;
       pointer-events: none;
-      letter-spacing: 1px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
   </style>
 </head>
@@ -64,7 +66,7 @@
     Tap anywhere to start the Vybes AR experience
   </div>
 
-  <!-- Backup branding (hidden once AR is running) -->
+  <!-- HTML branding (always visible) -->
   <div id="brandingBackup">POWERED BY AVRLY</div>
 
   <a-scene
@@ -73,59 +75,64 @@
     renderer="logarithmicDepthBuffer: true; antialias: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <!-- AR.js camera -->
-    <a-entity id="camera" camera look-controls></a-entity>
-
-    <!-- Fancy video rig placed once in front of camera, then stays in world -->
-    <a-entity
-      id="video-rig"
-      place-once-in-front-of-camera="distance: 3"
-      animation__float="property: position; dir: alternate; dur: 2500; easing: easeInOutSine; from: 0 0 0; to: 0 0.08 0">
-
-      <!-- Glow / glass background -->
-      <a-plane
-        position="0 0 0"
-        width="2.2"
-        height="1.4"
-        material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
-      </a-plane>
-
-      <!-- Neon border -->
-      <a-plane
-        position="0 0 0.01"
-        width="2.26"
-        height="1.46"
-        material="color: #ff7f50; opacity: 0.65; wireframe: true;">
-      </a-plane>
-
-      <!-- Video screen (auto aspect) -->
-      <a-plane
-        id="video-screen"
-        src="#video"
-        position="0 0 0.02"
-        video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
-      </a-plane>
-
-      <!-- Spinning accent ring -->
-      <a-ring
-        position="1 -0.6 0.05"
-        radius-inner="0.05"
-        radius-outer="0.08"
-        material="color: #ff7f50; opacity: 0.95;"
-        animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
-      </a-ring>
-
-      <!-- POWERED BY AVRLY text -->
+    <!-- Camera with UI attached so user always sees it -->
+    <a-entity id="cameraRig" camera look-controls>
+      <!-- Fancy video rig, slightly below center and in front -->
       <a-entity
-        position="0 0.95 0.06"
-        text="value: POWERED BY AVRLY; color: coral; align: center; width: 3; letterSpacing: 3;">
-      </a-entity>
+        id="video-rig"
+        position="0 -0.1 -2.5"
+        animation__float="property: position; dir: alternate; dur: 2500; easing: easeInOutSine; from: 0 -0.1 -2.5; to: 0 0.0 -2.5">
 
+        <!-- Glow / glass background -->
+        <a-plane
+          position="0 0 0"
+          width="2.2"
+          height="1.4"
+          material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
+        </a-plane>
+
+        <!-- Neon border -->
+        <a-plane
+          position="0 0 0.01"
+          width="2.26"
+          height="1.46"
+          material="color: #ff7f50; opacity: 0.65; wireframe: true;">
+        </a-plane>
+
+        <!-- Video screen (keeps the correct aspect ratio) -->
+        <a-plane
+          id="video-screen"
+          src="#video"
+          position="0 0 0.02"
+          video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
+        </a-plane>
+
+        <!-- Spinning accent ring -->
+        <a-ring
+          position="1 -0.6 0.05"
+          radius-inner="0.05"
+          radius-outer="0.08"
+          material="color: #ff7f50; opacity: 0.95;"
+          animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
+        </a-ring>
+
+        <!-- 3D AVRLY text in the AR scene -->
+        <a-text
+          value="POWERED BY AVRLY"
+          position="0 0.95 0.06"
+          align="center"
+          color="#ff7f50"
+          width="4"
+          anchor="center"
+          side="double">
+        </a-text>
+
+      </a-entity>
     </a-entity>
 
     <!-- Assets -->
     <a-assets>
-      <!-- Local video file: keep this in same folder as index.html -->
+      <!-- Local video file: must sit in same folder as index.html -->
       <video
         id="video"
         src="./Vybes.mp4"
@@ -171,6 +178,7 @@
         const data = this.data;
         let width, height;
 
+        // Fit inside maxWidth / maxHeight while preserving aspect
         if (videoAspect >= 1) {
           width = data.maxWidth;
           height = width / videoAspect;
@@ -192,45 +200,9 @@
       }
     });
 
-    // Place the rig once in front of the camera so users see it immediately,
-    // but then it stays fixed in world space (not stuck to the camera).
-    AFRAME.registerComponent('place-once-in-front-of-camera', {
-      schema: {
-        distance: { type: 'number', default: 3 }
-      },
-
-      init: function () {
-        this.placed = false;
-        this.tick = AFRAME.utils.throttleTick(this.doPlace.bind(this), 100);
-      },
-
-      doPlace: function () {
-        if (this.placed) return;
-        const camEl = document.querySelector('#camera');
-        if (!camEl || !camEl.object3D) return;
-
-        const camObj = camEl.object3D;
-        if (!camObj.parent) return;
-
-        const THREE = window.THREE;
-        const distance = this.data.distance;
-
-        const direction = new THREE.Vector3(0, 0, -1);
-        direction.applyQuaternion(camObj.quaternion);
-
-        const targetPos = new THREE.Vector3().copy(camObj.position).add(direction.multiplyScalar(distance));
-
-        this.el.object3D.position.copy(targetPos);
-        this.el.object3D.quaternion.copy(camObj.quaternion);
-
-        this.placed = true;
-      }
-    });
-
-    // Tap-to-play (required for mobile autoplay)
+    // Tap-to-play (required for mobile autoplay policies)
     const overlay = document.getElementById("overlay");
     const video = document.getElementById("video");
-    const branding = document.getElementById("brandingBackup");
 
     overlay.addEventListener("click", function () {
       if (!video) return;
@@ -238,7 +210,7 @@
       video.play()
         .then(() => {
           overlay.style.display = "none";
-          branding.style.display = "none";
+          // We keep the HTML AVRLY badge visible on purpose
         })
         .catch(err => {
           alert("Video could not start:\n" + err.message);

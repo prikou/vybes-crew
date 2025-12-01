@@ -27,7 +27,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.9);
       color: white;
       display: flex;
       align-items: center;
@@ -64,7 +64,7 @@
     Tap anywhere to start the Vybes AR experience
   </div>
 
-  <!-- HTML fallback watermark -->
+  <!-- Backup branding (hidden once AR is running) -->
   <div id="brandingBackup">POWERED BY AVRLY</div>
 
   <a-scene
@@ -73,61 +73,59 @@
     renderer="logarithmicDepthBuffer: true; antialias: true;"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <!-- Marker-based AR: use the default HIRO marker -->
-    <a-marker preset="hiro">
-
-      <!-- Fancy video rig sitting on the marker -->
-      <a-entity id="video-rig"
-        position="0 0 0"
-        animation__float="property: position; dir: alternate; dur: 2000; easing: easeInOutSine; from: 0 0 0; to: 0 0.04 0">
-
-        <!-- Glow frame behind video -->
-        <a-plane
-          position="0 0 0"
-          width="1.8"
-          height="1.1"
-          material="color: #111; opacity: 0.85; metalness: 0.3; roughness: 0.2;">
-        </a-plane>
-
-        <!-- Outer subtle border -->
-        <a-plane
-          position="0 0 0.01"
-          width="1.84"
-          height="1.14"
-          material="color: #ff7f50; opacity: 0.6; wireframe: true;">
-        </a-plane>
-
-        <!-- Video screen (auto aspect) -->
-        <a-plane
-          id="video-screen"
-          src="#video"
-          position="0 0 0.02"
-          video-fit-to-aspect>
-        </a-plane>
-
-        <!-- Little glowing badge in corner -->
-        <a-ring
-          position="0.82 -0.5 0.04"
-          radius-inner="0.04"
-          radius-outer="0.06"
-          material="color: #ff7f50; opacity: 0.9;"
-          animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
-        </a-ring>
-
-        <!-- AVRLY text floating above -->
-        <a-entity
-          position="0 0.8 0.05"
-          text="value: POWERED BY AVRLY; color: coral; align: center; width: 2.5; letterSpacing: 3;">
-        </a-entity>
-
-      </a-entity>
-    </a-marker>
-
     <!-- AR.js camera -->
-    <a-entity camera></a-entity>
+    <a-entity id="camera" camera look-controls></a-entity>
+
+    <!-- Fancy video rig placed once in front of camera, then stays in world -->
+    <a-entity
+      id="video-rig"
+      place-once-in-front-of-camera="distance: 3"
+      animation__float="property: position; dir: alternate; dur: 2500; easing: easeInOutSine; from: 0 0 0; to: 0 0.08 0">
+
+      <!-- Glow / glass background -->
+      <a-plane
+        position="0 0 0"
+        width="2.2"
+        height="1.4"
+        material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
+      </a-plane>
+
+      <!-- Neon border -->
+      <a-plane
+        position="0 0 0.01"
+        width="2.26"
+        height="1.46"
+        material="color: #ff7f50; opacity: 0.65; wireframe: true;">
+      </a-plane>
+
+      <!-- Video screen (auto aspect) -->
+      <a-plane
+        id="video-screen"
+        src="#video"
+        position="0 0 0.02"
+        video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
+      </a-plane>
+
+      <!-- Spinning accent ring -->
+      <a-ring
+        position="1 -0.6 0.05"
+        radius-inner="0.05"
+        radius-outer="0.08"
+        material="color: #ff7f50; opacity: 0.95;"
+        animation__spin="property: rotation; to: 0 0 360; loop: true; dur: 2000; easing: linear">
+      </a-ring>
+
+      <!-- POWERED BY AVRLY text -->
+      <a-entity
+        position="0 0.95 0.06"
+        text="value: POWERED BY AVRLY; color: coral; align: center; width: 3; letterSpacing: 3;">
+      </a-entity>
+
+    </a-entity>
 
     <!-- Assets -->
     <a-assets>
+      <!-- Local video file: keep this in same folder as index.html -->
       <video
         id="video"
         src="./Vybes.mp4"
@@ -140,11 +138,11 @@
   </a-scene>
 
   <script>
-    // Component to keep video aspect ratio perfect on the plane
+    // Keep video plane aspect ratio correct based on actual video dimensions
     AFRAME.registerComponent('video-fit-to-aspect', {
       schema: {
-        maxWidth: { type: 'number', default: 1.6 },
-        maxHeight: { type: 'number', default: 0.9 }
+        maxWidth: { type: 'number', default: 2.0 },
+        maxHeight: { type: 'number', default: 1.1 }
       },
 
       init: function () {
@@ -173,9 +171,7 @@
         const data = this.data;
         let width, height;
 
-        // Fit within maxWidth / maxHeight while preserving aspect
         if (videoAspect >= 1) {
-          // Wider than tall
           width = data.maxWidth;
           height = width / videoAspect;
           if (height > data.maxHeight) {
@@ -183,7 +179,6 @@
             width = height * videoAspect;
           }
         } else {
-          // Taller than wide (rare for promo videos, but safe)
           height = data.maxHeight;
           width = height * videoAspect;
           if (width > data.maxWidth) {
@@ -197,7 +192,42 @@
       }
     });
 
-    // Tap-to-play logic (mobile-safe)
+    // Place the rig once in front of the camera so users see it immediately,
+    // but then it stays fixed in world space (not stuck to the camera).
+    AFRAME.registerComponent('place-once-in-front-of-camera', {
+      schema: {
+        distance: { type: 'number', default: 3 }
+      },
+
+      init: function () {
+        this.placed = false;
+        this.tick = AFRAME.utils.throttleTick(this.doPlace.bind(this), 100);
+      },
+
+      doPlace: function () {
+        if (this.placed) return;
+        const camEl = document.querySelector('#camera');
+        if (!camEl || !camEl.object3D) return;
+
+        const camObj = camEl.object3D;
+        if (!camObj.parent) return;
+
+        const THREE = window.THREE;
+        const distance = this.data.distance;
+
+        const direction = new THREE.Vector3(0, 0, -1);
+        direction.applyQuaternion(camObj.quaternion);
+
+        const targetPos = new THREE.Vector3().copy(camObj.position).add(direction.multiplyScalar(distance));
+
+        this.el.object3D.position.copy(targetPos);
+        this.el.object3D.quaternion.copy(camObj.quaternion);
+
+        this.placed = true;
+      }
+    });
+
+    // Tap-to-play (required for mobile autoplay)
     const overlay = document.getElementById("overlay");
     const video = document.getElementById("video");
     const branding = document.getElementById("brandingBackup");
@@ -208,7 +238,7 @@
       video.play()
         .then(() => {
           overlay.style.display = "none";
-          branding.style.display = "none"; // AR text takes over
+          branding.style.display = "none";
         })
         .catch(err => {
           alert("Video could not start:\n" + err.message);

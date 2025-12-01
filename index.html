@@ -8,7 +8,7 @@
   <!-- A-Frame -->
   <script src="https://cdn.jsdelivr.net/gh/aframevr/aframe@e47f441/dist/aframe-master.min.js"></script>
 
-  <!-- A-Frame Extras -->
+  <!-- A-Frame Extras (optional) -->
   <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v6.1.1/dist/aframe-extras.min.js"></script>
 
   <!-- AR.js -->
@@ -27,15 +27,33 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0,0,0,0.85);
+      background: rgba(0, 0, 0, 0.85);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 22px;
-      font-family: sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       z-index: 9999;
       cursor: pointer;
+      text-align: center;
+      padding: 0 20px;
+      box-sizing: border-box;
+    }
+
+    /* CSS fallback if AR text doesn't render yet */
+    #brandingBackup {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      text-align: center;
+      color: coral;
+      font-weight: bold;
+      font-size: 14px;
+      z-index: 9998;
+      pointer-events: none;
+      letter-spacing: 1px;
     }
   </style>
 </head>
@@ -43,17 +61,38 @@
 <body>
 
   <!-- Tap to play overlay -->
-  <div id="overlay">Tap anywhere to start video</div>
+  <div id="overlay">
+    Tap anywhere to start video
+  </div>
+
+  <!-- HTML fallback watermark -->
+  <div id="brandingBackup">POWERED BY AVRLY</div>
 
   <a-scene
     embedded
     vr-mode-ui="enabled:false"
     arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false">
 
-    <a-camera position="0 0 0"></a-camera>
+    <!-- Camera rig -->
+    <a-entity id="cameraRig" camera position="0 0 0">
+
+      <!-- Video screen -->
+      <a-plane
+        id="video-screen"
+        src="#video"
+        position="0 0 -2.5"
+        video-screen-fit>
+      </a-plane>
+
+      <!-- POWERED BY AVRLY (3D Text in AR) -->
+      <a-entity
+        position="0 -1.2 -2.5"
+        text="value: POWERED BY AVRLY; color: coral; align: center; width: 4; letterSpacing: 2;">
+      </a-entity>
+
+    </a-entity>
 
     <a-assets>
-      <!-- ✅ Local video file in same folder -->
       <video
         id="video"
         src="./Vybes.mp4"
@@ -63,25 +102,79 @@
       </video>
     </a-assets>
 
-    <!-- Video screen -->
-    <a-plane
-      src="#video"
-      position="0 1.5 -4"
-      rotation="0 0 0"
-      width="4"
-      height="2.25">
-    </a-plane>
-
   </a-scene>
 
   <script>
+    // Component to resize the video plane to match video aspect
+    AFRAME.registerComponent('video-screen-fit', {
+      schema: {
+        distance: { type: 'number', default: 2.5 },
+        maxWidth: { type: 'number', default: 3.0 },
+        maxHeight: { type: 'number', default: 1.8 }
+      },
+
+      init: function () {
+        this.video = document.getElementById('video');
+        this.onResize = this.onResize.bind(this);
+        this.updateFromVideo = this.updateFromVideo.bind(this);
+
+        if (this.video) {
+          if (this.video.readyState >= 1) {
+            this.updateFromVideo();
+          } else {
+            this.video.addEventListener('loadedmetadata', this.updateFromVideo);
+          }
+        }
+
+        window.addEventListener('resize', this.onResize);
+      },
+
+      remove: function () {
+        window.removeEventListener('resize', this.onResize);
+        if (this.video) {
+          this.video.removeEventListener('loadedmetadata', this.updateFromVideo);
+        }
+      },
+
+      updateFromVideo: function () {
+        if (!this.video || !this.video.videoWidth) return;
+
+        const videoAspect = this.video.videoWidth / this.video.videoHeight;
+        const screenAspect = window.innerWidth / window.innerHeight;
+        const d = this.data;
+
+        let width, height;
+
+        if (screenAspect > videoAspect) {
+          height = d.maxHeight;
+          width = height * videoAspect;
+        } else {
+          width = d.maxWidth;
+          height = width / videoAspect;
+        }
+
+        this.el.setAttribute('width', width);
+        this.el.setAttribute('height', height);
+        this.el.setAttribute('position', `0 0 -${d.distance}`);
+      },
+
+      onResize: function () {
+        this.updateFromVideo();
+      }
+    });
+
+    // Tap-to-play
     const overlay = document.getElementById("overlay");
     const video = document.getElementById("video");
+    const branding = document.getElementById("brandingBackup");
 
     overlay.addEventListener("click", function () {
+      if (!video) return;
+
       video.play()
         .then(() => {
           overlay.style.display = "none";
+          branding.style.display = "none"; // hide backup once AR renders
         })
         .catch(err => {
           alert("Video could not start:\n" + err.message);

@@ -71,44 +71,43 @@
     <!-- Camera -->
     <a-entity id="camera" camera look-controls></a-entity>
 
-    <!-- World-anchored AR panel (NOT parented to camera) -->
+    <!-- World anchored AR panel -->
     <a-entity
       id="video-rig"
-      place-once-in-front-of-camera="distance: 0.4"
+      place-once-in-front-of-camera="distance: 0.35"
       animation__float="property: position; dir: alternate; dur: 2600; easing: easeInOutSine;
                          from: 0 0 0; to: 0 0.06 0">
 
       <!-- Glass plate -->
       <a-plane
         position="0 0 0"
-        width="2.1"
-        height="1.3"
-        material="color: #050608; opacity: 0.9; metalness: 0.4; roughness: 0.2;">
-      </a-plane>
-
-      <!-- Glow border -->
-      <a-plane
-        position="0 0 0.01"
         width="2.2"
         height="1.4"
+        material="color: #050608; opacity: 0.88; metalness: 0.4; roughness: 0.2;">
+      </a-plane>
+
+      <!-- Glow wireframe -->
+      <a-plane
+        position="0 0 0.01"
+        width="2.26"
+        height="1.46"
         material="color: #ff7f50; opacity: 0.7; wireframe: true;">
       </a-plane>
 
-      <!-- VIDEO: clearly visible 16:9 plane -->
+      <!-- Video display -->
       <a-plane
         id="video-screen"
-        position="0 0 0.03"
-        width="1.6"
-        height="0.9"
-        material="shader: flat; src: #video; color: #000;">
+        src="#video"
+        position="0 0 0.02"
+        video-fit-to-aspect="maxWidth: 2; maxHeight: 1.1">
       </a-plane>
 
-      <!-- AVRLY label above -->
+      <!-- Label above -->
       <a-text
         value="POWERED BY AVRLY"
-        position="0 0.85 0.06"
+        position="0 0.95 0.06"
         align="center"
-        width="3.5"
+        width="4"
         color="#ff7f50"
         side="double">
       </a-text>
@@ -117,12 +116,10 @@
 
     <!-- Assets -->
     <a-assets>
-      <!-- Must be in the same folder as index.html -->
       <video
         id="video"
         src="./Vybes.mp4"
         loop
-        muted
         webkit-playsinline
         playsinline>
       </video>
@@ -131,9 +128,44 @@
   </a-scene>
 
   <script>
-    // Place once in front of camera (world space, not stuck to camera)
+    // Ajust video size based on real aspect ratio
+    AFRAME.registerComponent('video-fit-to-aspect', {
+      schema: {
+        maxWidth: { type: 'number', default: 2.0 },
+        maxHeight: { type: 'number', default: 1.1 }
+      },
+
+      init: function () {
+        this.video = document.getElementById('video');
+        this.updateFromVideo = this.updateFromVideo.bind(this);
+
+        if (this.video.readyState >= 1) {
+          this.updateFromVideo();
+        } else {
+          this.video.addEventListener('loadedmetadata', this.updateFromVideo);
+        }
+      },
+
+      updateFromVideo: function () {
+        if (!this.video.videoWidth) return;
+
+        const aspect = this.video.videoWidth / this.video.videoHeight;
+        let width = this.data.maxWidth;
+        let height = width / aspect;
+
+        if (height > this.data.maxHeight) {
+          height = this.data.maxHeight;
+          width = height * aspect;
+        }
+
+        this.el.setAttribute('width', width);
+        this.el.setAttribute('height', height);
+      }
+    });
+
+    // Place once in front of camera and lock in world
     AFRAME.registerComponent('place-once-in-front-of-camera', {
-      schema: { distance: { type: 'number', default: 0.4 } }, // ~15–20 inches
+      schema: { distance: { type: 'number', default: 0.35 } },
 
       init: function () {
         this.placed = false;
@@ -147,18 +179,11 @@
         if (!cam || !cam.object3D) return;
 
         const THREE = window.THREE;
-        const camObj = cam.object3D;
-
-        const dir = new THREE.Vector3(0, 0, -1)
-          .applyQuaternion(camObj.quaternion)
-          .normalize();
-
-        const pos = new THREE.Vector3()
-          .copy(camObj.position)
-          .add(dir.multiplyScalar(this.data.distance));
+        const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.object3D.quaternion);
+        const pos = new THREE.Vector3().copy(cam.object3D.position).add(dir.multiplyScalar(this.data.distance));
 
         this.el.object3D.position.copy(pos);
-        this.el.object3D.quaternion.copy(camObj.quaternion);
+        this.el.object3D.quaternion.copy(cam.object3D.quaternion);
 
         this.placed = true;
       }
@@ -166,18 +191,12 @@
 
     // Tap to play
     const overlay = document.getElementById("overlay");
-    const video   = document.getElementById("video");
+    const video = document.getElementById("video");
 
     overlay.addEventListener("click", function () {
-      if (!video) return;
-
       video.play()
-        .then(() => {
-          overlay.style.display = "none";
-        })
-        .catch(err => {
-          alert("Video blocked: " + err.message);
-        });
+        .then(() => overlay.style.display = "none")
+        .catch(err => alert("Video blocked: " + err.message));
     });
   </script>
 
